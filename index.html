@@ -9,8 +9,6 @@
 
 <link rel="manifest" href="manifest.json">
 
-<meta name="theme-color" content="#0f2027">
-
 <style>
 
 body{
@@ -27,14 +25,21 @@ margin:auto;
 background:rgba(0,0,0,0.6);
 padding:25px;
 border-radius:15px;
+box-shadow:0 0 25px rgba(0,0,0,0.6);
 }
 
 h1{
 color:#ffd700;
 }
 
+.location{
+color:#ddd;
+margin-bottom:10px;
+}
+
 .clock{
 font-size:42px;
+font-weight:bold;
 margin:15px 0;
 }
 
@@ -45,14 +50,56 @@ padding:15px;
 border-radius:10px;
 }
 
-button{
+.card h3{
+color:#ffd700;
+}
+
+.count{
+margin-top:5px;
+}
+
+.prayerGrid{
+display:grid;
+grid-template-columns:1fr 1fr;
+gap:10px;
 margin-top:10px;
+}
+
+.prayerBox{
+background:linear-gradient(135deg,#1c1c1c,#2a2a2a);
+padding:12px;
+border-radius:10px;
+}
+
+.prayerName{
+font-size:14px;
+color:#ffd700;
+}
+
+.prayerTime{
+font-size:16px;
+margin-top:4px;
+font-weight:bold;
+}
+
+button{
+margin-top:12px;
 padding:10px 18px;
 border:none;
 border-radius:8px;
 background:#ffd700;
 font-weight:bold;
 cursor:pointer;
+}
+
+button:hover{
+background:#ffcc00;
+}
+
+.footer{
+margin-top:12px;
+font-size:12px;
+color:#aaa;
 }
 
 </style>
@@ -65,86 +112,205 @@ cursor:pointer;
 
 <h1>🌙 Ramadan Live Clock</h1>
 
+<div class="location">📍 Panchagarh, Bangladesh</div>
+
 <div class="clock" id="clock"></div>
 
 <div class="card">
+<h3>🌅 Sehri Ends</h3>
+<div id="sehriTime">Loading...</div>
+<div class="count" id="sehriCountdown"></div>
+</div>
 
-<h3>🌅 Sehri</h3>
-
-<div id="sehri"></div>
-
+<div class="card">
+<h3>🌇 Iftar Time</h3>
+<div id="iftarTime">Loading...</div>
+<div class="count" id="iftarCountdown"></div>
 </div>
 
 <div class="card">
 
-<h3>🌇 Iftar</h3>
+<h3>🕌 Prayer Times</h3>
 
-<div id="iftar"></div>
+<div class="prayerGrid">
+
+<div class="prayerBox">
+<div class="prayerName">Fajr</div>
+<div class="prayerTime" id="fajr"></div>
+</div>
+
+<div class="prayerBox">
+<div class="prayerName">Dhuhr</div>
+<div class="prayerTime" id="dhuhr"></div>
+</div>
+
+<div class="prayerBox">
+<div class="prayerName">Asr</div>
+<div class="prayerTime" id="asr"></div>
+</div>
+
+<div class="prayerBox">
+<div class="prayerName">Maghrib</div>
+<div class="prayerTime" id="maghrib"></div>
+</div>
+
+<div class="prayerBox">
+<div class="prayerName">Isha</div>
+<div class="prayerTime" id="isha"></div>
+</div>
 
 </div>
 
-<button id="installBtn" style="display:none">📲 Install App</button>
+</div>
+
+<button onclick="sharePage()">📤 Share</button>
+
+<button id="installBtn" style="display:none;">📲 Install App</button>
+
+<div class="footer">
+Ramadan Kareem 🌙
+</div>
 
 </div>
 
 <script>
 
-/* Live Clock */
+function convertTo12(time){
 
-setInterval(()=>{
+let p=time.split(":");
+
+let h=parseInt(p[0]);
+
+let m=p[1];
+
+let ampm=h>=12?"PM":"AM";
+
+h=h%12;
+
+h=h?h:12;
+
+return h+":"+m+" "+ampm;
+
+}
+
+function updateClock(){
 
 document.getElementById("clock").innerHTML=
-new Date().toLocaleTimeString('en-US',{hour12:true})
 
-},1000)
+new Date().toLocaleTimeString('en-US',{hour12:true});
 
-/* Prayer Time API */
+}
+
+setInterval(updateClock,1000);
+
+let sehriH=4;
+let sehriM=30;
+
+let iftarH=18;
+let iftarM=10;
+
+function loadTimes(){
 
 fetch("https://api.aladhan.com/v1/timingsByCity?city=Panchagarh&country=Bangladesh&method=1")
 
 .then(r=>r.json())
 
-.then(d=>{
+.then(data=>{
 
-let t=d.data.timings
+let t=data.data.timings;
 
-document.getElementById("sehri").innerHTML=t.Fajr
+document.getElementById("sehriTime").innerHTML=convertTo12(t.Fajr);
+document.getElementById("iftarTime").innerHTML=convertTo12(t.Maghrib);
 
-document.getElementById("iftar").innerHTML=t.Maghrib
+document.getElementById("fajr").innerHTML=convertTo12(t.Fajr);
+document.getElementById("dhuhr").innerHTML=convertTo12(t.Dhuhr);
+document.getElementById("asr").innerHTML=convertTo12(t.Asr);
+document.getElementById("maghrib").innerHTML=convertTo12(t.Maghrib);
+document.getElementById("isha").innerHTML=convertTo12(t.Isha);
 
-})
+sehriH=parseInt(t.Fajr.split(":")[0]);
+sehriM=parseInt(t.Fajr.split(":")[1]);
+
+iftarH=parseInt(t.Maghrib.split(":")[0]);
+iftarM=parseInt(t.Maghrib.split(":")[1]);
+
+});
+
+}
+
+function countdown(h,m,id){
+
+let now=new Date();
+let target=new Date();
+
+target.setHours(h);
+target.setMinutes(m);
+target.setSeconds(0);
+
+if(target<now){
+target.setDate(target.getDate()+1);
+}
+
+let d=target-now;
+
+let hh=Math.floor(d/1000/60/60);
+let mm=Math.floor(d/1000/60)%60;
+let ss=Math.floor(d/1000)%60;
+
+document.getElementById(id).innerHTML=
+hh+"h "+mm+"m "+ss+"s remaining";
+
+}
+
+setInterval(function(){
+
+countdown(sehriH,sehriM,"sehriCountdown");
+countdown(iftarH,iftarM,"iftarCountdown");
+
+},1000);
+
+loadTimes();
+
+function sharePage(){
+
+if(navigator.share){
+
+navigator.share({
+title:"Panchagarh Ramadan Clock",
+url:window.location.href
+});
+
+}else{
+
+alert("Copy link and share");
+
+}
+
+}
 
 /* Install App */
 
-let deferredPrompt
+let deferredPrompt;
 
-window.addEventListener('beforeinstallprompt', e=>{
+window.addEventListener('beforeinstallprompt', (e) => {
 
-e.preventDefault()
+e.preventDefault();
 
-deferredPrompt=e
+deferredPrompt = e;
 
-installBtn.style.display="block"
+document.getElementById("installBtn").style.display="block";
 
-})
+});
 
-installBtn.addEventListener("click", async ()=>{
+document.getElementById("installBtn").addEventListener("click", async () => {
 
-deferredPrompt.prompt()
+deferredPrompt.prompt();
 
-await deferredPrompt.userChoice
+const { outcome } = await deferredPrompt.userChoice;
 
-deferredPrompt=null
+deferredPrompt = null;
 
-})
-
-/* Service Worker */
-
-if("serviceWorker" in navigator){
-
-navigator.serviceWorker.register("sw.js")
-
-}
+});
 
 </script>
 
